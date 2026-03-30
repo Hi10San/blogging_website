@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #e8e4d9; /* Vintage paper tone */
+            --bg-color: #e8e4d9;
             --ink-black: #1a1a1a;
             --accent-blue: #4a76a8;
             --border-weight: 2px;
@@ -17,14 +17,13 @@
 
         body {
             background-color: var(--bg-color);
-            background-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png'); /* Subtle paper texture */
+            background-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
             font-family: 'Libre Baskerville', serif;
             color: var(--ink-black);
             overflow-x: hidden;
             line-height: 1.4;
         }
 
-        /* --- Animations --- */
         @keyframes floatHand {
             0% { transform: translate(0, 0) rotate(0deg); }
             50% { transform: translate(5px, -10px) rotate(2deg); }
@@ -36,7 +35,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- Header & Nav --- */
         header {
             border-bottom: var(--border-weight) solid var(--ink-black);
             padding: 10px 40px;
@@ -61,9 +59,21 @@
 
         .nav-links a:hover { color: var(--accent-blue); }
 
+        .nav-links a.sign-in-btn {
+            background: var(--ink-black);
+            color: var(--bg-color);
+            padding: 6px 16px;
+            margin-right: 0;
+            transition: all 0.3s;
+        }
+
+        .nav-links a.sign-in-btn:hover {
+            background: var(--accent-blue);
+            color: white;
+        }
+
         .logo { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; }
 
-        /* --- Main Layout --- */
         .container {
             display: grid;
             grid-template-columns: 2fr 1fr;
@@ -81,7 +91,6 @@
 
         .sidebar { padding: 40px; }
 
-        /* --- Typography & Elements --- */
         h1, h2, h3 {
             font-family: 'Bebas Neue', sans-serif;
             text-transform: uppercase;
@@ -113,7 +122,6 @@
             color: var(--bg-color);
         }
 
-        /* --- The Hand Illustration --- */
         .hand-container {
             position: relative;
             width: 100%;
@@ -130,34 +138,61 @@
             filter: grayscale(1) contrast(1.2);
         }
 
-        /* --- Login Section (Mockup) --- */
-        .login-box {
+        /* Sidebar quote + CTA */
+        .sidebar-quote {
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid var(--ink-black);
+        }
+
+        .sidebar-quote p { font-style: italic; margin-bottom: 12px; line-height: 1.6; }
+
+        .sidebar-cta {
             background: rgba(0,0,0,0.03);
             padding: 30px;
             border: 1px solid var(--ink-black);
+            text-align: center;
         }
 
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            background: transparent;
-            border: 1px solid var(--ink-black);
-            font-family: inherit;
+        .sidebar-cta h3 { font-size: 1.6rem; margin-bottom: 12px; }
+
+        .sidebar-cta p {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            color: #555;
         }
 
-        .login-btn {
+        .cta-btn {
+            display: block;
             width: 100%;
             background: var(--accent-blue);
             color: white;
             border: none;
-            padding: 10px;
+            padding: 12px;
             font-family: 'Bebas Neue', sans-serif;
             font-size: 1.2rem;
+            letter-spacing: 1px;
             cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            margin-bottom: 10px;
+            transition: all 0.3s;
         }
 
-        /* --- Footer --- */
+        .cta-btn:hover { background: var(--ink-black); }
+
+        .cta-btn.outline {
+            background: transparent;
+            color: var(--ink-black);
+            border: 1px solid var(--ink-black);
+        }
+
+        .cta-btn.outline:hover {
+            background: var(--ink-black);
+            color: var(--bg-color);
+        }
+
         footer {
             border-top: var(--border-weight) solid var(--ink-black);
             padding: 20px;
@@ -166,7 +201,15 @@
             letter-spacing: 2px;
         }
 
-        /* --- Mobile Responsiveness --- */
+        .admin-link {
+            color: transparent;
+            font-size: 0.5rem;
+            text-decoration: none;
+            user-select: none;
+        }
+
+        .admin-link:hover { color: rgba(0,0,0,0.15); }
+
         @media (max-width: 900px) {
             .container { grid-template-columns: 1fr; }
             section { border-right: none; border-bottom: var(--border-weight) solid var(--ink-black); }
@@ -183,17 +226,15 @@
             <a href="#">USE CASES</a>
             <a href="#">INTEGRATIONS</a>
             <a href="#">PRICING</a>
-            <a href="#" onclick="togglePage('login')">SIGN IN</a>
+            <a href="login.html" class="sign-in-btn">SIGN IN</a>
         </nav>
     </header>
 
-    <main class="container" id="main-content">
-        <!-- Home View -->
-        <section id="home-view">
+    <main class="container">
+        <section>
             <div class="article-card">
                 <h1>EXPLORE REFORMED<br>THOUGHTS</h1>
                 <div class="hand-container">
-                    <!-- Placeholder for vintage hand illustration -->
                     <img src="https://cdn-icons-png.flaticon.com/512/37/37632.png" alt="Hand" class="hand-img" style="transform: scaleX(-1);">
                 </div>
                 <h3>Automation's Final Frontier</h3>
@@ -208,34 +249,28 @@
             </div>
         </section>
 
-        <!-- Sidebar / Headlines -->
         <aside class="sidebar">
             <h3>THE HEADLINES</h3>
-            <div style="margin-bottom: 30px;">
+            <div class="sidebar-quote">
                 <p><i>"What I like best about Hi10's ability to create efficiencies in my workflow is the integration across all platforms."</i></p>
-                <p><strong>- Madeline Boss</strong><br>Client Services Manager</p>
+                <p><strong>— Madeline Boss</strong><br>Client Services Manager</p>
             </div>
-            
-            <div class="login-box" id="login-section">
-                <h3>LOG IN TO YOUR ACCOUNT</h3>
-                <input type="email" placeholder="you@company.com">
-                <input type="password" placeholder="Password">
-                <button class="login-btn">LOG IN</button>
-                <p style="font-size: 0.8rem; margin-top: 10px; text-align: center;">Forgot Password? | Create Account</p>
+
+            <div class="sidebar-cta">
+                <h3>JOIN HI10</h3>
+                <p>Access exclusive articles, save your favourite reads, and connect with a global community of reformed thinkers.</p>
+                <a href="signup.html" class="cta-btn">CREATE ACCOUNT</a>
+                <a href="login.html" class="cta-btn outline">LOG IN</a>
             </div>
         </aside>
     </main>
 
     <footer>
-        • JOIN USERS IN OVER 60 COUNTRIES • HI10 BLOG © 2024
+        • JOIN USERS IN OVER 60 COUNTRIES • HI10 BLOG © 2024 •
+        <a href="admin-login.html" class="admin-link">▪hhhhhh</a>
     </footer>
 
     <script>
-        // Smooth scroll animation for text
-        const observerOptions = {
-            threshold: 0.1
-        };
-
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -243,7 +278,7 @@
                     entry.target.style.transform = "translateY(0)";
                 }
             });
-        }, observerOptions);
+        }, { threshold: 0.1 });
 
         document.querySelectorAll('.article-card').forEach(card => {
             card.style.opacity = "0";
@@ -251,16 +286,6 @@
             card.style.transition = "all 0.8s ease-out";
             observer.observe(card);
         });
-
-        // Simple Page Toggler logic
-        function togglePage(page) {
-            const loginBox = document.getElementById('login-section');
-            loginBox.style.boxShadow = "0 0 20px rgba(74, 118, 168, 0.5)";
-            setTimeout(() => {
-                loginBox.style.boxShadow = "none";
-            }, 1000);
-            alert("This would typically navigate to the " + page + " page.");
-        }
     </script>
 </body>
 </html>
