@@ -54,17 +54,77 @@ const THEME_OPTIONS = [
 
 interface BottomMenuProps {
   onWriteBlog?: () => void;
+  onMyBlogs?: () => void;
+  onMyProfile?: () => void;
+  onFollowing?: () => void;
+  onSearch?: (query: string, mode: "users" | "blogs") => void;
+  onReadBlogId?: (id: string) => void;
 }
 
-const BottomMenu = ({ onWriteBlog }: BottomMenuProps) => {
+const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch, onReadBlogId }: BottomMenuProps) => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [elementRef] = useMeasure();
   const [hiddenRef, hiddenBounds] = useMeasure();
-  const [view, setView] = useState<
-    "default" | "home" | "search" | "notifications" | "profile" | "theme"
-  >("default");
+  const [view, setView] = useState<MenuView>("default");
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [searchMode, setSearchMode] = useState<"users" | "blogs">("users");
+
+  // Fetch notifications periodically
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { fetchNotifications } = await import("../../lib/api");
+        const data = await fetchNotifications();
+        setNotifications(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    
+    // Initial load
+    load();
+
+    // Poll every 3 seconds for a snappier real-time feel
+    const interval = setInterval(load, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch immediately when opening the tab
+  useEffect(() => {
+    if (view === "notifications") {
+      const load = async () => {
+        try {
+          const { fetchNotifications } = await import("../../lib/api");
+          const data = await fetchNotifications();
+          setNotifications(data);
+        } catch (e) {}
+      };
+      load();
+    }
+  }, [view]);
+
+  // Mark as read when leaving notifications view
+  const wasNotificationsView = useRef(false);
+  useEffect(() => {
+    if (view === "notifications") {
+      wasNotificationsView.current = true;
+    } else if (wasNotificationsView.current) {
+      wasNotificationsView.current = false;
+      const markRead = async () => {
+        try {
+          const { markNotificationsRead } = await import("../../lib/api");
+          await markNotificationsRead();
+          setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        } catch (e) {}
+      };
+      // Only fire if there are unread notifications
+      if (notifications.some(n => !n.read)) {
+        markRead();
+      }
+    }
+  }, [view, notifications]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -126,39 +186,95 @@ const BottomMenu = ({ onWriteBlog }: BottomMenuProps) => {
               />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder={searchMode === "blogs" ? "Search blogs..." : "Search users..."}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const val = e.currentTarget.value.trim();
+                    if (val && onSearch) {
+                      setView("default");
+                      onSearch(val, searchMode);
+                      e.currentTarget.value = "";
+                    }
+                  }
+                }}
                 className="w-full pl-9 pr-3 py-[6px] text-[14.5px] text-foreground bg-muted/80 border border-border rounded-[12px] focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent placeholder:text-muted-foreground/50"
               />
             </div>
             <div className="flex gap-1.5">
-              {SEARCH_OPTIONS.map(({ icon: Icon, text }) => (
-                <button
-                  key={text}
-                  className={`${sharedHover} flex-1 flex items-center justify-center gap-1.5 bg-muted hover:bg-accent`}
-                >
-                  <HugeiconsIcon
-                    icon={Icon}
-                    size={14}
-                    strokeWidth={2}
-                    className="text-muted-foreground group-hover:text-foreground transition-all duration-75"
-                  />
-                  <span className="transition-all duration-75">{text}</span>
-                </button>
-              ))}
+              <button
+                className={`${sharedHover} w-full flex items-center gap-2 bg-muted hover:bg-accent`}
+                onClick={() => {
+                  setView("default");
+                  onFollowing?.();
+                }}
+              >
+                <HugeiconsIcon icon={UserEdit01Icon} size={16} />
+                <span>Following</span>
+              </button>
+              {/* Blog filter toggle */}
+              <button
+                onClick={() => setSearchMode(m => m === "blogs" ? "users" : "blogs")}
+                className={`${sharedHover} flex-1 flex items-center justify-center gap-1.5 transition-all ${
+                  searchMode === "blogs"
+                    ? "bg-foreground text-background hover:bg-foreground/90"
+                    : "bg-muted hover:bg-accent"
+                }`}
+              >
+                <HugeiconsIcon
+                  icon={FilterHorizontalIcon}
+                  size={14}
+                  strokeWidth={2}
+                  className="transition-all duration-75"
+                />
+                <span className="transition-all duration-75">
+                  {searchMode === "blogs" ? "Blogs ✓" : "Filter"}
+                </span>
+              </button>
             </div>
           </div>
         );
 
-      case "notifications":
+      case "notifications": {
+        const unreadCount = notifications.filter(n => !n.read).length;
         return (
-          <div className="space-y-0.5 min-w-[210px] p-[6px] py-0.5">
-            {NOTIFICATION_TYPES.map((t) => (
-              <button key={t} className={sharedHover}>
-                <span className="transition-all duration-75">{t}</span>
-              </button>
-            ))}
+          <div className="min-w-[280px] max-w-[320px] max-h-[350px] overflow-y-auto p-[8px] py-1 custom-scrollbar">
+            <div className="px-2 py-1.5 mb-1 flex items-center justify-between">
+              <span className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Notifications
+              </span>
+              {unreadCount > 0 && (
+                <span className="text-[10px] font-medium bg-foreground text-background px-1.5 py-0.5 rounded-md">
+                  {unreadCount} new
+                </span>
+              )}
+            </div>
+            
+            {notifications.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground text-[13px]">
+                No notifications yet.
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {notifications.map((n) => (
+                  <button
+                    key={n._id}
+                    onClick={() => {
+                        if (n.blogId) {
+                            onReadBlogId?.(n.blogId);
+                            setView("default");
+                        }
+                    }}
+                    className={`flex flex-col w-full text-left p-2.5 rounded-[12px] text-[13px] ${n.read ? 'text-muted-foreground bg-transparent hover:bg-muted/30' : 'text-foreground bg-muted/60 font-medium hover:bg-muted/80'}`}
+                  >
+                    <span>{n.message}</span>
+                    <span className="text-[10px] opacity-70 mt-1">{new Date(n.createdAt).toLocaleString()}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         );
+      }
 
       case "profile": {
         const { token, user } = getAuth();
@@ -188,6 +304,18 @@ const BottomMenu = ({ onWriteBlog }: BottomMenuProps) => {
           <div className="space-y-0.5 min-w-[230px] p-[6px] py-0.5">
             <p className="px-3 py-1.5 text-[13px] text-muted-foreground truncate">{user?.email}</p>
             <div className="border-t border-border my-[2px]" />
+            <button
+              onClick={() => { setView("default"); onMyProfile?.(); }}
+              className={sharedHover}
+            >
+              <span className="transition-all duration-75">My Profile</span>
+            </button>
+            <button
+              onClick={() => { setView("default"); onMyBlogs?.(); }}
+              className={sharedHover}
+            >
+              <span className="transition-all duration-75">My Blogs</span>
+            </button>
             <button
               id="nav-logout"
               onClick={() => {
@@ -230,7 +358,7 @@ const BottomMenu = ({ onWriteBlog }: BottomMenuProps) => {
       default:
         return null;
     }
-  }, [view, theme]);
+  }, [view, theme, notifications]);
 
   return (
     <div
@@ -326,21 +454,30 @@ const BottomMenu = ({ onWriteBlog }: BottomMenuProps) => {
 
       {/* Toolbar */}
       <div className="flex items-center gap-1 bg-background/95 backdrop-blur-xl border border-border rounded-[18px] p-1 mt-3 z-10">
-        {MAIN_NAV.map(({ icon: Icon, name }) => (
-          <button
-            key={name}
-            className={`p-3 rounded-[16px] transition-all ${view === name ? "bg-accent" : "hover:bg-muted"
-              }`}
-            onClick={() => setView(view === name ? "default" : (name as any))}
-          >
-            <HugeiconsIcon
-              icon={Icon}
-              size={22}
-              className={`transition-all ${view === name ? "text-foreground" : "text-muted-foreground"
+        {MAIN_NAV.map(({ icon: Icon, name }) => {
+          const isNotifications = name === "notifications";
+          const unreadCount = isNotifications ? notifications.filter(n => !n.read).length : 0;
+          return (
+            <button
+              key={name}
+              className={`relative p-3 rounded-[16px] transition-all ${view === name ? "bg-accent" : "hover:bg-muted"
                 }`}
-            />
-          </button>
-        ))}
+              onClick={() => setView(view === name ? "default" : (name as any))}
+            >
+              <HugeiconsIcon
+                icon={Icon}
+                size={22}
+                className={`transition-all ${view === name ? "text-foreground" : "text-muted-foreground"
+                  }`}
+              />
+              {isNotifications && unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-red-500 rounded-full border border-background flex items-center justify-center text-[8px] text-white font-bold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

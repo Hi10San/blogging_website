@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { DottedSurface } from '../components/Dotted-surface';
-import { registerUser, saveAuth } from '../lib/api';
+import { registerUser } from '../lib/api';
 
 export default function SignIn() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
@@ -28,7 +29,7 @@ export default function SignIn() {
 
     setLoading(true);
     try {
-      const res = await registerUser(email, password);
+      const res = await registerUser(email, password, username);
       if (res.error) {
         setError(res.error);
       } else {
@@ -69,6 +70,22 @@ export default function SignIn() {
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {/* username */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-white/50 uppercase tracking-widest">
+                  Username
+                </label>
+                <input
+                  id="signin-username"
+                  type="text"
+                  required
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  placeholder="Choose a unique username"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition-all focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
               {/* email */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-white/50 uppercase tracking-widest">

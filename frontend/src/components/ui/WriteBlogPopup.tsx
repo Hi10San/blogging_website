@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { createPost } from "../../lib/api";
 import {
   Cancel01Icon,
   Maximize01Icon,
@@ -192,12 +193,27 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
   };
 
   // ── Publish ─────────────────────────────────────────────
-  const handlePublish = () => {
+  const handlePublish = async () => {
     setIsPublishing(true);
-    setTimeout(() => {
-      setIsPublishing(false);
+    try {
+      const contentHTML = editorRef.current?.innerHTML || "";
+      const tagsArray = tags.split(",").map(t => t.trim()).filter(Boolean);
+
+      await createPost({
+        title,
+        content: contentHTML,
+        tags: tagsArray,
+        cover: coverPreview, // Base64 string for now
+        status: "Published"
+      });
+
       setPublished(true);
-    }, 1800);
+    } catch (err: any) {
+      console.error("Failed to publish blog", err);
+      alert(`Failed to publish blog: ${err.message}`);
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   // ── Preview toggle ──────────────────────────────────────
@@ -298,10 +314,10 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
             {/* ── Resize Handles ──────────────────────── */}
             {!isMaximized && (
               <>
-                <ResizeHandle edge="e"  cursor="ew-resize"   style={{ right: 0, top: 8, bottom: 8, width: 6 }} />
-                <ResizeHandle edge="w"  cursor="ew-resize"   style={{ left: 0, top: 8, bottom: 8, width: 6 }} />
-                <ResizeHandle edge="s"  cursor="ns-resize"   style={{ bottom: 0, left: 8, right: 8, height: 6 }} />
-                <ResizeHandle edge="n"  cursor="ns-resize"   style={{ top: 0, left: 8, right: 8, height: 6 }} />
+                <ResizeHandle edge="e" cursor="ew-resize" style={{ right: 0, top: 8, bottom: 8, width: 6 }} />
+                <ResizeHandle edge="w" cursor="ew-resize" style={{ left: 0, top: 8, bottom: 8, width: 6 }} />
+                <ResizeHandle edge="s" cursor="ns-resize" style={{ bottom: 0, left: 8, right: 8, height: 6 }} />
+                <ResizeHandle edge="n" cursor="ns-resize" style={{ top: 0, left: 8, right: 8, height: 6 }} />
                 <ResizeHandle edge="se" cursor="nwse-resize" style={{ right: 0, bottom: 0, width: 14, height: 14 }} />
                 <ResizeHandle edge="sw" cursor="nesw-resize" style={{ left: 0, bottom: 0, width: 14, height: 14 }} />
                 <ResizeHandle edge="ne" cursor="nesw-resize" style={{ right: 0, top: 0, width: 14, height: 14 }} />
@@ -423,18 +439,18 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
             {/* ── Toolbar ────────────────────────────────── */}
             {!isPreview && (
               <div className="flex-shrink-0 flex items-center gap-0.5 px-4 py-1.5 border-b border-border flex-wrap">
-                <ToolBtn icon={TextBoldIcon}       label="Bold"          onClick={() => format("bold")} />
-                <ToolBtn icon={TextItalicIcon}     label="Italic"        onClick={() => format("italic")} />
-                <ToolBtn icon={TextUnderlineIcon}  label="Underline"     onClick={() => format("underline")} />
+                <ToolBtn icon={TextBoldIcon} label="Bold" onClick={() => format("bold")} />
+                <ToolBtn icon={TextItalicIcon} label="Italic" onClick={() => format("italic")} />
+                <ToolBtn icon={TextUnderlineIcon} label="Underline" onClick={() => format("underline")} />
                 <div className="w-px h-4 bg-border mx-1" />
-                <ToolBtn icon={ListViewIcon}       label="List"          onClick={() => format("insertUnorderedList")} />
+                <ToolBtn icon={ListViewIcon} label="List" onClick={() => format("insertUnorderedList")} />
                 <div className="w-px h-4 bg-border mx-1" />
-                <ToolBtn icon={TextAlignLeftIcon}  label="Align Left"    onClick={() => format("justifyLeft")} />
+                <ToolBtn icon={TextAlignLeftIcon} label="Align Left" onClick={() => format("justifyLeft")} />
                 <ToolBtn icon={TextAlignCenterIcon} label="Align Center" onClick={() => format("justifyCenter")} />
-                <ToolBtn icon={TextAlignRightIcon} label="Align Right"   onClick={() => format("justifyRight")} />
+                <ToolBtn icon={TextAlignRightIcon} label="Align Right" onClick={() => format("justifyRight")} />
                 <div className="w-px h-4 bg-border mx-1" />
-                <ToolBtn icon={LinkSquare01Icon}   label="Insert Link"   onClick={insertLink} />
-                <ToolBtn icon={ImageAdd01Icon}     label="Insert Image"  onClick={() => fileInputRef.current?.click()} />
+                <ToolBtn icon={LinkSquare01Icon} label="Insert Link" onClick={insertLink} />
+                <ToolBtn icon={ImageAdd01Icon} label="Insert Image" onClick={() => fileInputRef.current?.click()} />
               </div>
             )}
 
@@ -497,7 +513,7 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
                       animate={{ opacity: 1, scale: 1 }}
                       className="text-[13px] text-green-500 font-medium px-4 py-1.5"
                     >
-                      Published! 🎉
+                      Published!
                     </motion.span>
                   ) : (
                     <motion.button
