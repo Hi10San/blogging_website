@@ -8,14 +8,16 @@ import {
 } from "../../lib/api";
 import {
   Cancel01Icon, Move01Icon, UserEdit01Icon, Tick01Icon,
-  PencilEdit02Icon, Camera01Icon, Calendar01Icon, ViewIcon,
-  ArrowLeft01Icon, UserRemove01Icon,
+  ArrowLeft01Icon, UserRemove01Icon, Camera01Icon, PencilEdit02Icon, Calendar01Icon, ViewIcon
 } from "@hugeicons/core-free-icons";
+import { useDraggablePopup } from "../../hooks/useDraggablePopup";
 
 interface ProfilePopupProps {
   open: boolean;
   onClose: () => void;
   onBlogClick?: (blog: any) => void;
+  zIndex?: number;
+  onBringToFront?: () => void;
 }
 
 const MIN_W = 360;
@@ -37,7 +39,7 @@ function getGradient(u: string) {
 
 type Panel = "main" | "followers" | "following";
 
-export const ProfilePopup: React.FC<ProfilePopupProps> = ({ open, onClose, onBlogClick }) => {
+export const ProfilePopup: React.FC<ProfilePopupProps> = ({ open, onClose, onBlogClick, zIndex = 50, onBringToFront }) => {
   const [username, setUsername] = useState("");
   const [editingUsername, setEditingUsername] = useState(false);
   const [draftUsername, setDraftUsername] = useState("");
@@ -136,60 +138,25 @@ export const ProfilePopup: React.FC<ProfilePopupProps> = ({ open, onClose, onBlo
   };
 
   // ── Geometry / Drag / Resize ───────────────────────────────
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [size, setSize] = useState({ w: 440, h: 560 });
-  const posRef = useRef(pos); posRef.current = pos;
-  const sizeRef = useRef(size); sizeRef.current = size;
-
-  useEffect(() => {
-    if (open) {
-      const w = Math.min(440, window.innerWidth - 40);
-      const h = Math.min(560, window.innerHeight - 40);
-      setSize({ w, h });
-      setPos({ x: (window.innerWidth - w) / 2, y: (window.innerHeight - h) / 2 });
-    }
-  }, [open]);
-
-  const dragStart = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
-  const onDragPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    dragStart.current = { mx: e.clientX, my: e.clientY, px: posRef.current.x, py: posRef.current.y };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }, []);
-  const onDragPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragStart.current) return;
-    const dx = e.clientX - dragStart.current.mx, dy = e.clientY - dragStart.current.my;
-    setPos({
-      x: Math.max(0, Math.min(window.innerWidth - sizeRef.current.w, dragStart.current.px + dx)),
-      y: Math.max(0, Math.min(window.innerHeight - sizeRef.current.h, dragStart.current.py + dy)),
-    });
-  }, []);
-  const onDragPointerUp = useCallback(() => { dragStart.current = null; }, []);
-
-  type Edge = "se" | "sw" | "ne" | "nw" | "e" | "w" | "s" | "n";
-  const rsRef = useRef<{ mx: number; my: number; px: number; py: number; pw: number; ph: number; edge: Edge } | null>(null);
-  const onResizeDown = useCallback((e: React.PointerEvent<HTMLDivElement>, edge: Edge) => {
-    e.preventDefault(); e.stopPropagation();
-    rsRef.current = { mx: e.clientX, my: e.clientY, px: posRef.current.x, py: posRef.current.y, pw: sizeRef.current.w, ph: sizeRef.current.h, edge };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }, []);
-  const onResizeMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!rsRef.current) return;
-    const { mx, my, px, py, pw, ph, edge } = rsRef.current;
-    const dx = e.clientX - mx, dy = e.clientY - my;
-    let nw = pw, nh = ph, nx = px, ny = py;
-    if (edge.includes("e")) nw = Math.max(MIN_W, Math.min(window.innerWidth - px, pw + dx));
-    if (edge.includes("s")) nh = Math.max(MIN_H, Math.min(window.innerHeight - py, ph + dy));
-    if (edge.includes("w")) { nw = Math.max(MIN_W, pw - dx); nx = Math.min(px + pw - MIN_W, px + dx); }
-    if (edge.includes("n")) { nh = Math.max(MIN_H, ph - dy); ny = Math.min(py + ph - MIN_H, py + dy); }
-    setPos({ x: nx, y: ny }); setSize({ w: nw, h: nh });
-  }, []);
-  const onResizeUp = useCallback(() => { rsRef.current = null; }, []);
-
-  const RH = ({ edge, cursor, style }: { edge: Edge; cursor: string; style: React.CSSProperties }) => (
-    <div style={{ position: "absolute", cursor, ...style, zIndex: 60 }}
-      onPointerDown={e => onResizeDown(e, edge)} onPointerMove={onResizeMove} onPointerUp={onResizeUp} />
-  );
+  const {
+    pos,
+    size,
+    isMaximized,
+    popupStyle,
+    onDragPointerDown,
+    onDragPointerMove,
+    onDragPointerUp,
+    toggleMaximize,
+    renderResizeHandles
+  } = useDraggablePopup({
+    id: "profile",
+    isOpen: open,
+    defaultWidth: 440,
+    defaultHeight: 560,
+    minWidth: MIN_W,
+    minHeight: MIN_H,
+    zIndex
+  });
 
   const publishedBlogs = blogs.filter(b => b.status !== "Draft");
 
@@ -227,24 +194,15 @@ export const ProfilePopup: React.FC<ProfilePopupProps> = ({ open, onClose, onBlo
     <AnimatePresence>
       {open && (
         <>
-          <motion.div key="profile-backdrop"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]" onClick={onClose}
-          />
           <motion.div key="profile-popup"
             initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
             transition={{ duration: 0.25, ease: [0.32, 0, 0.24, 1] }}
-            style={{ position: "fixed", zIndex: 50, display: "flex", flexDirection: "column", left: pos.x, top: pos.y, width: size.w, height: size.h, minWidth: MIN_W, minHeight: MIN_H, maxWidth: "100vw", maxHeight: "100vh" }}
+            onPointerDown={() => onBringToFront?.()}
+            style={{ position: "fixed", zIndex: zIndex + 2, display: "flex", flexDirection: "column", left: pos.x, top: pos.y, width: size.w, height: size.h, minWidth: MIN_W, minHeight: MIN_H, maxWidth: "100vw", maxHeight: "100vh" }}
             className="bg-background/98 backdrop-blur-2xl border border-border shadow-2xl rounded-[20px] overflow-hidden"
           >
-            <RH edge="e"  cursor="ew-resize"   style={{ right: 0, top: 8, bottom: 8, width: 6 }} />
-            <RH edge="w"  cursor="ew-resize"   style={{ left: 0, top: 8, bottom: 8, width: 6 }} />
-            <RH edge="s"  cursor="ns-resize"   style={{ bottom: 0, left: 8, right: 8, height: 6 }} />
-            <RH edge="n"  cursor="ns-resize"   style={{ top: 0, left: 8, right: 8, height: 6 }} />
-            <RH edge="se" cursor="nwse-resize" style={{ right: 0, bottom: 0, width: 14, height: 14 }} />
-            <RH edge="sw" cursor="nesw-resize" style={{ left: 0, bottom: 0, width: 14, height: 14 }} />
-            <RH edge="ne" cursor="nesw-resize" style={{ right: 0, top: 0, width: 14, height: 14 }} />
-            <RH edge="nw" cursor="nwse-resize" style={{ left: 0, top: 0, width: 14, height: 14 }} />
+            {/* Resize Handles */}
+            {!isMaximized && renderResizeHandles()}
 
             {/* Header */}
             <div className="flex items-center gap-2 px-4 py-3 border-b border-border flex-shrink-0 select-none cursor-grab active:cursor-grabbing"
@@ -259,10 +217,12 @@ export const ProfilePopup: React.FC<ProfilePopupProps> = ({ open, onClose, onBlo
               <span className="text-[13px] font-semibold text-foreground tracking-tight flex-1 text-center truncate">
                 {panel === "followers" ? "Followers" : panel === "following" ? "Following" : "My Profile"}
               </span>
-              <button title="Close" onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-destructive/15 transition-all duration-75 text-muted-foreground hover:text-destructive flex-shrink-0">
-                <HugeiconsIcon icon={Cancel01Icon} size={15} />
-              </button>
+              <div onPointerDown={(e) => e.stopPropagation()}>
+                <button title="Close" onClick={onClose}
+                  className="p-1.5 rounded-lg hover:bg-destructive/15 transition-all duration-75 text-muted-foreground hover:text-destructive flex-shrink-0">
+                  <HugeiconsIcon icon={Cancel01Icon} size={15} />
+                </button>
+              </div>
             </div>
 
             {/* Body */}

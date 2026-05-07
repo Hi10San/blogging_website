@@ -4,10 +4,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { fetchFollowing } from "../../lib/api";
 import {
   Cancel01Icon,
-  Move01Icon,
   UserMultiple02Icon,
   UserAdd01Icon,
+  Move01Icon,
 } from "@hugeicons/core-free-icons";
+import { useDraggablePopup } from "../../hooks/useDraggablePopup";
 
 interface FollowingUser {
   username: string;
@@ -19,6 +20,8 @@ interface FollowingPopupProps {
   open: boolean;
   onClose: () => void;
   onUserClick: (username: string) => void;
+  zIndex?: number;
+  onBringToFront?: () => void;
 }
 
 const MIN_W = 340;
@@ -38,7 +41,7 @@ function getGradient(username: string) {
   return AVATAR_GRADIENTS[code % AVATAR_GRADIENTS.length];
 }
 
-export const FollowingPopup: React.FC<FollowingPopupProps> = ({ open, onClose, onUserClick }) => {
+export const FollowingPopup: React.FC<FollowingPopupProps> = ({ open, onClose, onUserClick, zIndex = 50, onBringToFront }) => {
   const [following, setFollowing] = useState<FollowingUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -54,121 +57,47 @@ export const FollowingPopup: React.FC<FollowingPopupProps> = ({ open, onClose, o
     }
   }, [open]);
 
-  // ── Geometry ────────────────────────────────────────────
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [size, setSize] = useState({ w: 400, h: 460 });
-  const posRef = useRef(pos);
-  const sizeRef = useRef(size);
-  posRef.current = pos;
-  sizeRef.current = size;
-
-  useEffect(() => {
-    if (open) {
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const w = Math.min(400, vw - 40);
-      const h = Math.min(460, vh - 40);
-      setSize({ w, h });
-      setPos({ x: (vw - w) / 2, y: (vh - h) / 2 });
-    }
-  }, [open]);
-
-  // ── Drag ────────────────────────────────────────────────
-  const dragStart = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
-
-  const onDragPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    dragStart.current = { mx: e.clientX, my: e.clientY, px: posRef.current.x, py: posRef.current.y };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }, []);
-
-  const onDragPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragStart.current) return;
-    const dx = e.clientX - dragStart.current.mx;
-    const dy = e.clientY - dragStart.current.my;
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const x = Math.max(0, Math.min(vw - sizeRef.current.w, dragStart.current.px + dx));
-    const y = Math.max(0, Math.min(vh - sizeRef.current.h, dragStart.current.py + dy));
-    setPos({ x, y });
-  }, []);
-
-  const onDragPointerUp = useCallback(() => { dragStart.current = null; }, []);
-
-  // ── Resize ──────────────────────────────────────────────
-  type ResizeEdge = "se" | "sw" | "ne" | "nw" | "e" | "w" | "s" | "n";
-  const resizeStart = useRef<{
-    mx: number; my: number; px: number; py: number; pw: number; ph: number; edge: ResizeEdge;
-  } | null>(null);
-
-  const onResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>, edge: ResizeEdge) => {
-    e.preventDefault(); e.stopPropagation();
-    resizeStart.current = {
-      mx: e.clientX, my: e.clientY,
-      px: posRef.current.x, py: posRef.current.y,
-      pw: sizeRef.current.w, ph: sizeRef.current.h,
-      edge,
-    };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }, []);
-
-  const onResizePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!resizeStart.current) return;
-    const { mx, my, px, py, pw, ph, edge } = resizeStart.current;
-    const dx = e.clientX - mx, dy = e.clientY - my;
-    const vw = window.innerWidth, vh = window.innerHeight;
-    let newW = pw, newH = ph, newX = px, newY = py;
-    if (edge.includes("e")) newW = Math.max(MIN_W, Math.min(vw - px, pw + dx));
-    if (edge.includes("s")) newH = Math.max(MIN_H, Math.min(vh - py, ph + dy));
-    if (edge.includes("w")) { newW = Math.max(MIN_W, pw - dx); newX = Math.min(px + pw - MIN_W, px + dx); }
-    if (edge.includes("n")) { newH = Math.max(MIN_H, ph - dy); newY = Math.min(py + ph - MIN_H, py + dy); }
-    setPos({ x: newX, y: newY });
-    setSize({ w: newW, h: newH });
-  }, []);
-
-  const onResizePointerUp = useCallback(() => { resizeStart.current = null; }, []);
-
-  const ResizeHandle = ({ edge, cursor, style }: { edge: ResizeEdge; cursor: string; style: React.CSSProperties }) => (
-    <div
-      style={{ position: "absolute", cursor, ...style, zIndex: 60 }}
-      onPointerDown={(e) => onResizePointerDown(e, edge)}
-      onPointerMove={onResizePointerMove}
-      onPointerUp={onResizePointerUp}
-    />
-  );
+  // ── Geometry & Drag/Resize ─────────────────────────────
+  const {
+    pos,
+    size,
+    isMaximized,
+    popupStyle,
+    onDragPointerDown,
+    onDragPointerMove,
+    onDragPointerUp,
+    toggleMaximize,
+    renderResizeHandles
+  } = useDraggablePopup({
+    id: "following",
+    isOpen: open,
+    defaultWidth: 400,
+    defaultHeight: 460,
+    minWidth: MIN_W,
+    minHeight: MIN_H,
+    zIndex
+  });
 
   return (
     <AnimatePresence>
       {open && (
         <>
           <motion.div
-            key="following-backdrop"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
-            onClick={onClose}
-          />
-          <motion.div
             key="following-popup"
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.92 }}
             transition={{ duration: 0.25, ease: [0.32, 0, 0.24, 1] }}
+            onPointerDown={() => onBringToFront?.()}
             style={{
-              position: "fixed", zIndex: 50, display: "flex", flexDirection: "column",
+              position: "fixed", zIndex: zIndex + 2, display: "flex", flexDirection: "column",
               left: pos.x, top: pos.y, width: size.w, height: size.h,
               minWidth: MIN_W, minHeight: MIN_H, maxWidth: "100vw", maxHeight: "100vh",
             }}
             className="bg-background/98 backdrop-blur-2xl border border-border shadow-2xl rounded-[20px] overflow-hidden"
           >
             {/* Resize handles */}
-            <ResizeHandle edge="e"  cursor="ew-resize"   style={{ right: 0, top: 8, bottom: 8, width: 6 }} />
-            <ResizeHandle edge="w"  cursor="ew-resize"   style={{ left: 0, top: 8, bottom: 8, width: 6 }} />
-            <ResizeHandle edge="s"  cursor="ns-resize"   style={{ bottom: 0, left: 8, right: 8, height: 6 }} />
-            <ResizeHandle edge="n"  cursor="ns-resize"   style={{ top: 0, left: 8, right: 8, height: 6 }} />
-            <ResizeHandle edge="se" cursor="nwse-resize" style={{ right: 0, bottom: 0, width: 14, height: 14 }} />
-            <ResizeHandle edge="sw" cursor="nesw-resize" style={{ left: 0, bottom: 0, width: 14, height: 14 }} />
-            <ResizeHandle edge="ne" cursor="nesw-resize" style={{ right: 0, top: 0, width: 14, height: 14 }} />
-            <ResizeHandle edge="nw" cursor="nwse-resize" style={{ left: 0, top: 0, width: 14, height: 14 }} />
+            {!isMaximized && renderResizeHandles()}
 
             {/* Drag header */}
             <div
@@ -187,13 +116,15 @@ export const FollowingPopup: React.FC<FollowingPopupProps> = ({ open, onClose, o
                   </span>
                 )}
               </div>
-              <button
-                title="Close"
-                onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-destructive/15 transition-all duration-75 text-muted-foreground hover:text-destructive flex-shrink-0"
-              >
-                <HugeiconsIcon icon={Cancel01Icon} size={15} />
-              </button>
+              <div onPointerDown={(e) => e.stopPropagation()}>
+                <button
+                  title="Close"
+                  onClick={onClose}
+                  className="p-1.5 rounded-lg hover:bg-destructive/15 transition-all duration-75 text-muted-foreground hover:text-destructive flex-shrink-0"
+                >
+                  <HugeiconsIcon icon={Cancel01Icon} size={15} />
+                </button>
+              </div>
             </div>
 
             {/* Body */}
