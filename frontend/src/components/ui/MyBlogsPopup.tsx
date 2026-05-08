@@ -108,7 +108,7 @@ export const MyBlogsPopup: React.FC<MyBlogsPopupProps> = ({ open, onClose, zInde
               maxWidth: "100vw",
               maxHeight: "100vh",
             }}
-            className="bg-background/98 backdrop-blur-2xl border border-border shadow-2xl rounded-[20px]"
+            className="bg-card/98 backdrop-blur-2xl border border-border shadow-2xl rounded-[20px]"
           >
             {/* ── Resize Handles ──────────────────────── */}
             {!isMaximized && renderResizeHandles()}

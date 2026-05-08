@@ -1,5 +1,6 @@
 import { DottedSurface } from "../components/Dotted-surface";
 import { cn } from "../lib/utils";
+import TextPressure from "../components/ui/TextPressure";
 
 export default function DemoOne() {
 	return (
@@ -13,7 +14,20 @@ export default function DemoOne() {
 						'blur-[30px]',
 					)}
 				/>
-				<h1 className="font-mono text-4xl font-semibold">Blog</h1>
+				<div className="w-[40vw] max-w-[400px] flex items-center justify-center -mt-[10vh]">
+					<TextPressure
+						text="BLOG."
+						flex={true}
+						alpha={false}
+						stroke={false}
+						width={true}
+						weight={true}
+						italic={true}
+						textColor="var(--foreground)"
+						strokeColor="#ff0000"
+						minFontSize={36}
+					/>
+				</div>
 			</div>
 		</DottedSurface>
 	);

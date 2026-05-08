@@ -90,7 +90,7 @@ export const ReadBlogPopup: React.FC<ReadBlogPopupProps> = ({ blog, onClose, zIn
         initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} transition={{ duration: 0.25, ease: [0.32, 0, 0.24, 1] }}
         onPointerDown={() => onBringToFront?.()}
         style={{ position: "fixed", zIndex: zIndex + 2, display: "flex", flexDirection: "column", overflow: "hidden", ...popupStyle, minWidth: MIN_W, minHeight: MIN_H, maxWidth: "100vw", maxHeight: "100vh" }}
-        className="bg-background border border-border shadow-2xl rounded-[20px]"
+        className="bg-card border border-border shadow-2xl rounded-[20px]"
       >
         {!isMaximized && renderResizeHandles()}
 

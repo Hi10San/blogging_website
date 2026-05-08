@@ -16,9 +16,12 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 		const AMOUNTX = 40;
 		const AMOUNTY = 60;
 
+		const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+		const isDark = document.documentElement.classList.contains('dark');
+
 		// Scene setup
 		const scene = new THREE.Scene();
-		scene.fog = new THREE.Fog(0xffffff, 2000, 10000);
+		scene.fog = new THREE.Fog(isDark ? 0x16171d : 0xf2f3f4, 2000, 10000);
 
 		const camera = new THREE.PerspectiveCamera(
 			60,
@@ -39,8 +42,46 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 		container.appendChild(renderer.domElement);
 
 		// Theme detection
-		const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
-		const isDark = bgColor === '#16171d' || bgColor === '#1a1a1a' || bgColor === '#16171d';
+		const updateColors = () => {
+			const isDark = document.documentElement.classList.contains('dark');
+			const colorAttr = geometry.attributes.color as THREE.BufferAttribute;
+			if (!colorAttr) return;
+			const colorArray = colorAttr.array as Float32Array;
+
+			if (scene.fog) {
+				scene.fog.color.setHex(isDark ? 0x16171d : 0xf2f3f4);
+			}
+
+			let i = 0;
+			for (let ix = 0; ix < AMOUNTX; ix++) {
+				for (let iy = 0; iy < AMOUNTY; iy++) {
+					const index = i * 3;
+					if (isDark) {
+						colorArray[index] = 200 / 255;
+						colorArray[index + 1] = 200 / 255;
+						colorArray[index + 2] = 200 / 255;
+					} else {
+						colorArray[index] = 0;
+						colorArray[index + 1] = 0;
+						colorArray[index + 2] = 0;
+					}
+					i++;
+				}
+			}
+			colorAttr.needsUpdate = true;
+		};
+
+		const observer = new MutationObserver((mutations) => {
+			mutations.forEach((mutation) => {
+				if (mutation.attributeName === 'class') {
+					updateColors();
+				}
+			});
+		});
+
+		observer.observe(document.documentElement, { attributes: true });
+
+		const initialIsDark = document.documentElement.classList.contains('dark');
 
 		// Create particles
 		const positions: number[] = [];
@@ -56,10 +97,10 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 				const z = iy * SEPARATION - (AMOUNTY * SEPARATION) / 2;
 
 				positions.push(x, y, z);
-				if (isDark) {
-					colors.push(200, 200, 200);
+				if (initialIsDark) {
+					colors.push(200 / 255, 200 / 255, 200 / 255);
 				} else {
-					colors.push(30, 30, 30);
+					colors.push(0, 0, 0);
 				}
 			}
 		}
@@ -129,6 +170,7 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 		return () => {
 			window.removeEventListener('resize', handleResize);
 			cancelAnimationFrame(animationId);
+			observer.disconnect();
 
 			// Clean up Three.js objects
 			scene.traverse((object: THREE.Object3D) => {

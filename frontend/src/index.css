@@ -4,6 +4,7 @@
 @import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -35,7 +36,7 @@
     font-size: 16px;
   }
 
-  --background: oklch(1 0 0);
+  --background: #ebd5bb;
 
   --foreground: oklch(0.145 0 0);
 
@@ -140,20 +141,24 @@ h1 {
   font-size: 56px;
   letter-spacing: -1.68px;
   margin: 32px 0;
+
   @media (max-width: 1024px) {
     font-size: 36px;
     margin: 20px 0;
   }
 }
+
 h2 {
   font-size: 24px;
   line-height: 118%;
   letter-spacing: -0.24px;
   margin: 0 0 8px;
+
   @media (max-width: 1024px) {
     font-size: 20px;
   }
 }
+
 p {
   margin: 0;
 }
@@ -252,11 +257,17 @@ code {
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;}
+    @apply border-border outline-ring/50;
+  }
+
   body {
-    @apply text-foreground;}
+    @apply bg-background text-foreground;
+  }
+
   html {
-    @apply font-sans;}}
+    @apply font-sans;
+  }
+}
 
 /* Write Blog editor placeholder */
 [contenteditable][data-placeholder]:empty::before {
@@ -264,4 +275,37 @@ code {
   color: oklch(0.556 0 0 / 40%);
   pointer-events: none;
   position: absolute;
+}
+
+/* Rich text formatting rules for contenteditable since Tailwind resets them */
+[contenteditable] b,
+[contenteditable] strong {
+  font-weight: 700;
+}
+
+[contenteditable] i,
+[contenteditable] em {
+  font-style: italic;
+}
+
+[contenteditable] u {
+  text-decoration: underline;
+}
+
+[contenteditable] ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+[contenteditable] ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+[contenteditable] li {
+  margin-bottom: 0.25rem;
 }

@@ -82,7 +82,7 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
         console.error(err);
       }
     };
-    
+
     // Initial load
     load();
 
@@ -99,7 +99,7 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
           const { fetchNotifications } = await import("../../lib/api");
           const data = await fetchNotifications();
           setNotifications(data);
-        } catch (e) {}
+        } catch (e) { }
       };
       load();
     }
@@ -117,7 +117,7 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
           const { markNotificationsRead } = await import("../../lib/api");
           await markNotificationsRead();
           setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-        } catch (e) {}
+        } catch (e) { }
       };
       // Only fire if there are unread notifications
       if (notifications.some(n => !n.read)) {
@@ -143,7 +143,7 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
   }, []);
 
   const sharedHover =
-    "group transition-all duration-75 px-3 py-2 text-[15px] text-muted-foreground w-full text-left rounded-[12px] hover:bg-muted/80 hover:text-foreground";
+    "group transition-all duration-75 px-3 py-2 text-[15px] text-muted-foreground w-full text-left rounded-[12px] hover:bg-[#ebd5bb] dark:hover:bg-muted/80 hover:text-foreground";
 
   const content = useMemo(() => {
     switch (view) {
@@ -202,7 +202,7 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
             </div>
             <div className="flex gap-1.5">
               <button
-                className={`${sharedHover} w-full flex items-center gap-2 bg-muted hover:bg-accent`}
+                className={`${sharedHover} w-full flex items-center gap-2 bg-muted/50 dark:bg-muted hover:bg-[#ebd5bb] dark:hover:bg-accent`}
                 onClick={() => {
                   setView("default");
                   onFollowing?.();
@@ -214,11 +214,10 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
               {/* Blog filter toggle */}
               <button
                 onClick={() => setSearchMode(m => m === "blogs" ? "users" : "blogs")}
-                className={`${sharedHover} flex-1 flex items-center justify-center gap-1.5 transition-all ${
-                  searchMode === "blogs"
-                    ? "bg-foreground text-background hover:bg-foreground/90"
-                    : "bg-muted hover:bg-accent"
-                }`}
+                className={`${sharedHover} flex-1 flex items-center justify-center gap-1.5 transition-all ${searchMode === "blogs"
+                  ? "bg-foreground text-background hover:bg-foreground/90"
+                  : "bg-muted/50 dark:bg-muted hover:bg-[#ebd5bb] dark:hover:bg-accent"
+                  }`}
               >
                 <HugeiconsIcon
                   icon={FilterHorizontalIcon}
@@ -248,7 +247,7 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
                 </span>
               )}
             </div>
-            
+
             {notifications.length === 0 ? (
               <div className="text-center py-6 text-muted-foreground text-[13px]">
                 No notifications yet.
@@ -259,12 +258,12 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
                   <button
                     key={n._id}
                     onClick={() => {
-                        if (n.blogId) {
-                            onReadBlogId?.(n.blogId);
-                            setView("default");
-                        }
+                      if (n.blogId) {
+                        onReadBlogId?.(n.blogId);
+                        setView("default");
+                      }
                     }}
-                    className={`flex flex-col w-full text-left p-2.5 rounded-[12px] text-[13px] ${n.read ? 'text-muted-foreground bg-transparent hover:bg-muted/30' : 'text-foreground bg-muted/60 font-medium hover:bg-muted/80'}`}
+                    className={`flex flex-col w-full text-left p-2.5 rounded-[12px] text-[13px] ${n.read ? 'text-muted-foreground bg-transparent hover:bg-[#ebd5bb] dark:hover:bg-muted/30' : 'text-foreground bg-muted/60 font-medium hover:bg-[#ebd5bb] dark:hover:bg-muted/80'}`}
                   >
                     <span>{n.message}</span>
                     <span className="text-[10px] opacity-70 mt-1">{new Date(n.createdAt).toLocaleString()}</span>
@@ -340,7 +339,7 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
                 onClick={() => setTheme(key as "light" | "dark" | "system")}
                 className={`flex items-center justify-center gap-2 rounded-[12px] px-3 py-2 transition-all duration-100 ${theme === key
                   ? "bg-accent text-foreground"
-                  : "text-muted-foreground hover:bg-muted"
+                  : "text-muted-foreground hover:bg-[#ebd5bb] dark:hover:bg-muted"
                   }`}
               >
                 <HugeiconsIcon
@@ -370,7 +369,7 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
         ref={hiddenRef}
         className="absolute left-[-9999px] top-[-9999px] invisible pointer-events-none"
       >
-        <div className="rounded-[18px] bg-background/95 border border-border py-1">
+        <div className="rounded-[18px] bg-white dark:bg-background/95 border border-border py-1">
           {content}
         </div>
       </div>
@@ -418,7 +417,7 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
           >
             <div
               ref={elementRef}
-              className="rounded-[18px] bg-background/95 backdrop-blur-xl border border-border"
+              className="rounded-[18px] bg-white dark:bg-background/95 backdrop-blur-xl border border-border"
             >
               <AnimatePresence initial={false} mode="popLayout">
                 <motion.div
@@ -453,14 +452,14 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
       </AnimatePresence>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-1 bg-background/95 backdrop-blur-xl border border-border rounded-[18px] p-1 mt-3 z-10">
+      <div className="flex items-center gap-1 bg-white dark:bg-background/95 backdrop-blur-xl border border-border rounded-[18px] p-1 mt-3 z-10">
         {MAIN_NAV.map(({ icon: Icon, name }) => {
           const isNotifications = name === "notifications";
           const unreadCount = isNotifications ? notifications.filter(n => !n.read).length : 0;
           return (
             <button
               key={name}
-              className={`relative p-3 rounded-[16px] transition-all ${view === name ? "bg-accent" : "hover:bg-muted"
+              className={`relative p-3 rounded-[16px] transition-all ${view === name ? "bg-accent" : "hover:bg-[#ebd5bb] dark:hover:bg-muted"
                 }`}
               onClick={() => setView(view === name ? "default" : (name as any))}
             >

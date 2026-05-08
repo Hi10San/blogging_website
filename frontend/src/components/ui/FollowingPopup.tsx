@@ -94,7 +94,7 @@ export const FollowingPopup: React.FC<FollowingPopupProps> = ({ open, onClose, o
               left: pos.x, top: pos.y, width: size.w, height: size.h,
               minWidth: MIN_W, minHeight: MIN_H, maxWidth: "100vw", maxHeight: "100vh",
             }}
-            className="bg-background/98 backdrop-blur-2xl border border-border shadow-2xl rounded-[20px] overflow-hidden"
+            className="bg-card/98 backdrop-blur-2xl border border-border shadow-2xl rounded-[20px] overflow-hidden"
           >
             {/* Resize handles */}
             {!isMaximized && renderResizeHandles()}

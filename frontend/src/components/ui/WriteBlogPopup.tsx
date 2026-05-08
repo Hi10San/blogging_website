@@ -43,6 +43,187 @@ type FormatCmd =
 const MIN_W = 520;
 const MIN_H = 420;
 
+const RichTextEditor = React.memo(({
+  editorRef,
+  initialContent,
+  onHtmlChange,
+  onImageSelect
+}: {
+  editorRef: React.RefObject<HTMLDivElement>,
+  initialContent: string,
+  onHtmlChange: (html: string) => void,
+  onImageSelect?: (img: HTMLImageElement | null) => void
+}) => {
+  return (
+    <>
+      <style>{`
+        .is-selected-img {
+          outline: 2px solid hsl(var(--primary));
+          box-shadow: 0 0 0 4px hsl(var(--primary) / 0.2);
+          cursor: pointer;
+        }
+        .prose img {
+          cursor: pointer;
+        }
+      `}</style>
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        data-placeholder="Start writing your blog…"
+        className="h-full overflow-y-auto px-5 py-4 text-foreground text-[15px] leading-relaxed focus:outline-none prose max-w-none"
+        style={{ fontFamily: "inherit" }}
+        dangerouslySetInnerHTML={{ __html: initialContent }}
+        onInput={(e) => {
+          onHtmlChange(e.currentTarget.innerHTML);
+          if (editorRef.current) {
+            const imgs = editorRef.current.querySelectorAll("img.is-selected-img");
+            imgs.forEach(img => img.classList.remove("is-selected-img"));
+          }
+          if (onImageSelect) onImageSelect(null);
+        }}
+        onBlur={(e) => onHtmlChange(e.currentTarget.innerHTML)}
+        onClick={(e) => {
+          if (editorRef.current) {
+            const imgs = editorRef.current.querySelectorAll("img.is-selected-img");
+            imgs.forEach(img => img.classList.remove("is-selected-img"));
+          }
+
+          if ((e.target as HTMLElement).tagName === "IMG") {
+            const img = e.target as HTMLImageElement;
+            img.classList.add("is-selected-img");
+            if (onImageSelect) onImageSelect(img);
+          } else {
+            if (onImageSelect) onImageSelect(null);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Backspace" || e.key === "Delete" || e.key.length === 1) {
+            if (editorRef.current) {
+              const imgs = editorRef.current.querySelectorAll("img.is-selected-img");
+              imgs.forEach(img => img.classList.remove("is-selected-img"));
+            }
+            if (onImageSelect) onImageSelect(null);
+          }
+        }}
+      />
+    </>
+  );
+});
+
+const ImageResizer = ({
+  editorRef,
+  selectedImage,
+  onResizeEnd
+}: {
+  editorRef: React.RefObject<HTMLDivElement>;
+  selectedImage: HTMLImageElement | null;
+  onResizeEnd: () => void;
+}) => {
+  const [rect, setRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+
+  const updateRect = useCallback(() => {
+    if (!selectedImage || !editorRef.current) {
+      setRect(null);
+      return;
+    }
+    const editorRect = editorRef.current.getBoundingClientRect();
+    const imgRect = selectedImage.getBoundingClientRect();
+
+    setRect({
+      top: imgRect.top - editorRect.top,
+      left: imgRect.left - editorRect.left,
+      width: imgRect.width,
+      height: imgRect.height
+    });
+  }, [selectedImage, editorRef]);
+
+  useEffect(() => {
+    updateRect();
+    const editor = editorRef.current;
+    if (editor) {
+      editor.addEventListener('scroll', updateRect);
+    }
+    window.addEventListener('resize', updateRect);
+
+    const observer = new MutationObserver(updateRect);
+    if (editor) {
+      observer.observe(editor, { childList: true, subtree: true, attributes: true });
+    }
+
+    return () => {
+      if (editor) editor.removeEventListener('scroll', updateRect);
+      window.removeEventListener('resize', updateRect);
+      observer.disconnect();
+    };
+  }, [updateRect, editorRef]);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!selectedImage || !rect) return;
+
+    const startX = e.clientX;
+    const startWidth = rect.width;
+    const startHeight = rect.height;
+    const aspectRatio = startWidth / startHeight;
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const newWidth = Math.max(50, startWidth + deltaX);
+      const newHeight = newWidth / aspectRatio;
+
+      selectedImage.style.width = `${newWidth}px`;
+      selectedImage.style.height = `${newHeight}px`;
+      selectedImage.style.maxWidth = '100%';
+
+      updateRect();
+    };
+
+    const handlePointerUp = () => {
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
+      onResizeEnd();
+    };
+
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
+  };
+
+  if (!selectedImage || !rect) return null;
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        pointerEvents: 'none',
+        zIndex: 10
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          bottom: -6,
+          right: -6,
+          width: 14,
+          height: 14,
+          backgroundColor: 'hsl(var(--primary))',
+          border: '2px solid white',
+          borderRadius: '50%',
+          cursor: 'nwse-resize',
+          pointerEvents: 'auto',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+        }}
+        onPointerDown={handlePointerDown}
+      />
+    </div>
+  );
+};
+
 export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
   open,
   onClose,
@@ -58,6 +239,12 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
   const [isSaved, setIsSaved] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [published, setPublished] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
+
+  const savedHtmlRef = useRef("");
+  const handleHtmlChange = useCallback((html: string) => {
+    savedHtmlRef.current = html;
+  }, []);
 
   // ── Geometry & Drag/Resize ─────────────────────────────
   const {
@@ -84,17 +271,90 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
   const popupRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorFileInputRef = useRef<HTMLInputElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
+
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      savedRangeRef.current = selection.getRangeAt(0).cloneRange();
+    }
+  };
+
+  const restoreSelection = () => {
+    editorRef.current?.focus();
+    const selection = window.getSelection();
+    if (selection && savedRangeRef.current) {
+      selection.removeAllRanges();
+      selection.addRange(savedRangeRef.current);
+    }
+  };
 
   // ── Rich Text Editor ────────────────────────────────────
-  const format = (cmd: FormatCmd) => {
-    document.execCommand(cmd, false);
-    editorRef.current?.focus();
+  const format = (cmd: FormatCmd, value?: string) => {
+    restoreSelection();
+    document.execCommand(cmd, false, value);
   };
 
   const insertLink = () => {
-    const url = window.prompt("Enter URL:");
-    if (url) document.execCommand("createLink", false, url);
-    editorRef.current?.focus();
+    saveSelection();
+    setTimeout(() => {
+      const url = window.prompt("Enter URL:");
+      if (!url) return;
+      restoreSelection();
+      document.execCommand("createLink", false, url);
+    }, 10);
+  };
+
+  const triggerImageUpload = () => {
+    saveSelection();
+    editorFileInputRef.current?.click();
+  };
+
+  const handleEditorImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      restoreSelection();
+      // Insert image with default 100% width and centered block
+      document.execCommand("insertHTML", false, `<img src="${dataUrl}" style="max-width: 100%; width: 100%; border-radius: 8px; margin: 10px auto; display: block;" />`);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleImageResize = (width: string) => {
+    if (selectedImage) {
+      selectedImage.style.width = width;
+      selectedImage.style.height = "auto";
+      selectedImage.style.maxWidth = "100%";
+      if (editorRef.current) {
+        handleHtmlChange(editorRef.current.innerHTML);
+      }
+    }
+  };
+
+  const handleImageAlignment = (alignment: "left" | "center" | "right") => {
+    if (selectedImage) {
+      if (alignment === "left") {
+        selectedImage.style.display = "inline";
+        selectedImage.style.float = "left";
+        selectedImage.style.margin = "10px 15px 10px 0";
+      } else if (alignment === "right") {
+        selectedImage.style.display = "inline";
+        selectedImage.style.float = "right";
+        selectedImage.style.margin = "10px 0 10px 15px";
+      } else {
+        selectedImage.style.display = "block";
+        selectedImage.style.float = "none";
+        selectedImage.style.margin = "10px auto";
+      }
+      if (editorRef.current) {
+        handleHtmlChange(editorRef.current.innerHTML);
+      }
+    }
   };
 
   // ── Cover Image ─────────────────────────────────────────
@@ -116,7 +376,14 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
   const handlePublish = async () => {
     setIsPublishing(true);
     try {
-      const contentHTML = editorRef.current?.innerHTML || "";
+      // Clean up selected image class before publishing
+      if (editorRef.current) {
+        const imgs = editorRef.current.querySelectorAll("img.is-selected-img");
+        imgs.forEach(img => img.classList.remove("is-selected-img"));
+        handleHtmlChange(editorRef.current.innerHTML);
+      }
+
+      const contentHTML = editorRef.current?.innerHTML || savedHtmlRef.current || "";
       const tagsArray = tags.split(",").map(t => t.trim()).filter(Boolean);
 
       await createPost({
@@ -148,17 +415,23 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
   const ToolBtn = ({
     icon,
     label,
-    onClick,
+    onAction,
     active,
   }: {
     icon: any;
     label: string;
-    onClick: () => void;
+    onAction: () => void;
     active?: boolean;
   }) => (
     <button
+      type="button"
       title={label}
-      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
+      onPointerDown={(e) => {
+        e.preventDefault(); // Prevent focus loss
+        e.stopPropagation(); // Prevent drag/bring-to-front interference
+        saveSelection();
+        onAction();
+      }}
       className={`p-1.5 rounded-lg transition-all duration-75 ${active ? "bg-accent text-foreground" : "hover:bg-muted text-muted-foreground hover:text-foreground"}`}
     >
       <HugeiconsIcon icon={icon} size={16} />
@@ -190,7 +463,7 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
               maxWidth: "100vw",
               maxHeight: "100vh",
             }}
-            className="bg-background/98 backdrop-blur-2xl border border-border shadow-2xl rounded-[20px]"
+            className="bg-card/98 backdrop-blur-2xl border border-border shadow-2xl rounded-[20px]"
           >
             {/* ── Resize Handles ──────────────────────── */}
             {renderResizeHandles()}
@@ -308,25 +581,82 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
 
             {/* ── Toolbar ────────────────────────────────── */}
             {!isPreview && (
-              <div className="flex-shrink-0 flex items-center gap-0.5 px-4 py-1.5 border-b border-border flex-wrap">
-                <ToolBtn icon={TextBoldIcon} label="Bold" onClick={() => format("bold")} />
-                <ToolBtn icon={TextItalicIcon} label="Italic" onClick={() => format("italic")} />
-                <ToolBtn icon={TextUnderlineIcon} label="Underline" onClick={() => format("underline")} />
-                <div className="w-px h-4 bg-border mx-1" />
-                <ToolBtn icon={ListViewIcon} label="List" onClick={() => format("insertUnorderedList")} />
-                <div className="w-px h-4 bg-border mx-1" />
-                <ToolBtn icon={TextAlignLeftIcon} label="Align Left" onClick={() => format("justifyLeft")} />
-                <ToolBtn icon={TextAlignCenterIcon} label="Align Center" onClick={() => format("justifyCenter")} />
-                <ToolBtn icon={TextAlignRightIcon} label="Align Right" onClick={() => format("justifyRight")} />
-                <div className="w-px h-4 bg-border mx-1" />
-                <ToolBtn icon={LinkSquare01Icon} label="Insert Link" onClick={insertLink} />
-                <ToolBtn icon={ImageAdd01Icon} label="Insert Image" onClick={() => fileInputRef.current?.click()} />
+              <div className="flex-shrink-0 flex items-center gap-0.5 px-4 py-1.5 border-b border-border flex-wrap min-h-[44px]">
+                {selectedImage ? (
+                  <>
+                    <span className="text-[13px] text-muted-foreground mr-2 ml-1 font-medium">Image:</span>
+                    <button
+                      type="button"
+                      onPointerDown={(e) => { e.preventDefault(); handleImageResize("25%"); }}
+                      className="text-[12px] px-2 py-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors font-medium"
+                    >
+                      25%
+                    </button>
+                    <button
+                      type="button"
+                      onPointerDown={(e) => { e.preventDefault(); handleImageResize("50%"); }}
+                      className="text-[12px] px-2 py-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors font-medium"
+                    >
+                      50%
+                    </button>
+                    <button
+                      type="button"
+                      onPointerDown={(e) => { e.preventDefault(); handleImageResize("100%"); }}
+                      className="text-[12px] px-2 py-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors font-medium"
+                    >
+                      100%
+                    </button>
+                    <div className="w-px h-4 bg-border mx-2" />
+                    <ToolBtn icon={TextAlignLeftIcon} label="Align Left" onAction={() => handleImageAlignment("left")} />
+                    <ToolBtn icon={TextAlignCenterIcon} label="Align Center" onAction={() => handleImageAlignment("center")} />
+                    <ToolBtn icon={TextAlignRightIcon} label="Align Right" onAction={() => handleImageAlignment("right")} />
+                    <div className="flex-1" />
+                    <button
+                      className="text-[12px] font-medium text-destructive hover:bg-destructive/10 px-2.5 py-1.5 rounded-lg transition-colors"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        selectedImage.remove();
+                        setSelectedImage(null);
+                        if (editorRef.current) handleHtmlChange(editorRef.current.innerHTML);
+                      }}
+                    >
+                      Remove
+                    </button>
+                    <button
+                      className="text-[12px] font-medium text-foreground  hover:bg-gray-600 px-2.5 py-1.5 rounded-lg transition-colors ml-1"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        selectedImage.classList.remove("is-selected-img");
+                        setSelectedImage(null);
+                        if (editorRef.current) handleHtmlChange(editorRef.current.innerHTML);
+                      }}
+                    >
+                      Done
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <ToolBtn icon={TextBoldIcon} label="Bold" onAction={() => format("bold")} />
+                    <ToolBtn icon={TextItalicIcon} label="Italic" onAction={() => format("italic")} />
+                    <ToolBtn icon={TextUnderlineIcon} label="Underline" onAction={() => format("underline")} />
+                    <div className="w-px h-4 bg-border mx-1" />
+                    <ToolBtn icon={ListViewIcon} label="List" onAction={() => format("insertUnorderedList")} />
+                    <div className="w-px h-4 bg-border mx-1" />
+                    <ToolBtn icon={TextAlignLeftIcon} label="Align Left" onAction={() => format("justifyLeft")} />
+                    <ToolBtn icon={TextAlignCenterIcon} label="Align Center" onAction={() => format("justifyCenter")} />
+                    <ToolBtn icon={TextAlignRightIcon} label="Align Right" onAction={() => format("justifyRight")} />
+                    <div className="w-px h-4 bg-border mx-1" />
+                    <ToolBtn icon={LinkSquare01Icon} label="Insert Link" onAction={insertLink} />
+                    <ToolBtn icon={ImageAdd01Icon} label="Insert Image" onAction={triggerImageUpload} />
+                    <input ref={editorFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleEditorImageChange} />
+                  </>
+                )}
               </div>
             )}
 
             {/* ── Editor / Preview ─────────────────────── */}
             <div className="flex-1 overflow-hidden relative">
-              {isPreview ? (
+              {isPreview && (
                 <div
                   className="h-full overflow-y-auto px-5 py-4 prose prose-sm max-w-none text-foreground"
                   style={{ fontSize: 15 }}
@@ -341,16 +671,24 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
                     </>
                   )}
                 </div>
-              ) : (
-                <div
-                  ref={editorRef}
-                  contentEditable
-                  suppressContentEditableWarning
-                  data-placeholder="Start writing your blog…"
-                  className="h-full overflow-y-auto px-5 py-4 text-foreground text-[15px] leading-relaxed focus:outline-none"
-                  style={{ fontFamily: "inherit" }}
-                />
               )}
+              <div style={{ display: isPreview ? 'none' : 'block', height: '100%', position: 'relative', overflow: 'hidden' }}>
+                <RichTextEditor
+                  editorRef={editorRef}
+                  initialContent={savedHtmlRef.current}
+                  onHtmlChange={handleHtmlChange}
+                  onImageSelect={setSelectedImage}
+                />
+                <ImageResizer
+                  editorRef={editorRef}
+                  selectedImage={selectedImage}
+                  onResizeEnd={() => {
+                    if (editorRef.current) {
+                      handleHtmlChange(editorRef.current.innerHTML);
+                    }
+                  }}
+                />
+              </div>
             </div>
 
             {/* ── Footer ───────────────────────────────── */}
