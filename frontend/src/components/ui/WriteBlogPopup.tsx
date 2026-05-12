@@ -458,8 +458,6 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
               flexDirection: "column",
               overflow: "hidden",
               ...popupStyle,
-              minWidth: MIN_W,
-              minHeight: MIN_H,
               maxWidth: "100vw",
               maxHeight: "100vh",
             }}

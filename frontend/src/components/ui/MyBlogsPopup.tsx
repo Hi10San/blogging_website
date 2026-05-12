@@ -103,8 +103,6 @@ export const MyBlogsPopup: React.FC<MyBlogsPopupProps> = ({ open, onClose, zInde
               flexDirection: "column",
               overflow: "hidden",
               ...popupStyle,
-              minWidth: MIN_W,
-              minHeight: MIN_H,
               maxWidth: "100vw",
               maxHeight: "100vh",
             }}

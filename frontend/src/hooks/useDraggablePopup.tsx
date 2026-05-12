@@ -39,14 +39,22 @@ export function useDraggablePopup({
     if (isOpen) {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const w = Math.min(defaultWidth, vw - 40);
-      const h = Math.min(defaultHeight, vh - 40);
-      setSize({ w, h });
-      setPos({ x: (vw - w) / 2, y: (vh - h) / 2 });
-      setIsMaximized(false);
+      if (vw <= 768) {
+        setSize({ w: vw, h: vh });
+        setPos({ x: 0, y: 0 });
+        setIsMaximized(true);
+      } else {
+        const effMinWidth = Math.min(minWidth, vw);
+        const effMinHeight = Math.min(minHeight, vh);
+        const w = Math.max(effMinWidth, Math.min(defaultWidth, vw - 40));
+        const h = Math.max(effMinHeight, Math.min(defaultHeight, vh - 40));
+        setSize({ w, h });
+        setPos({ x: Math.max(0, (vw - w) / 2), y: Math.max(0, (vh - h) / 2) });
+        setIsMaximized(false);
+      }
       removeSnap(id);
     }
-  }, [isOpen, id, defaultWidth, defaultHeight]); // eslint-disable-line
+  }, [isOpen, id, defaultWidth, defaultHeight, minWidth, minHeight]); // eslint-disable-line
 
   useEffect(() => {
     if (activeSnap === "none") return;
