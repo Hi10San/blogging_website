@@ -1,4 +1,4 @@
-const BASE = 'http://localhost:5000/api';
+const BASE = import.meta.env.VITE_API_URL || 'https://blogging-website-4hj6.onrender.com/api';
 
 export async function loginUser(email: string, password: string) {
   const res = await fetch(`${BASE}/auth/login`, {

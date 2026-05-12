@@ -1,6 +1,6 @@
 // components/Navbar.tsx
 import { useState, useCallback } from "react";
-import BottomMenu from "./ui/bottom-menu";
+import BottomMenu from "./ui/Bottom-menu";
 import { WriteBlogPopup } from "./ui/WriteBlogPopup";
 import { MyBlogsPopup } from "./ui/MyBlogsPopup";
 import { SearchResultsPopup } from "./ui/SearchResultsPopup";
