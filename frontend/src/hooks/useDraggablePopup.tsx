@@ -259,7 +259,7 @@ export function useDraggablePopup({
   }, [isMaximized, id, activeSnaps, removeSnap, defaultWidth, defaultHeight]);
 
   const popupStyle: React.CSSProperties = isMaximized
-    ? { left: 0, top: 0, width: "100vw", height: "100vh", borderRadius: 0 }
+    ? { left: 0, top: 0, width: "100vw", height: "100dvh", borderRadius: 0 }
     : { left: pos.x, top: pos.y, width: size.w, height: size.h };
 
   const ResizeHandle = useCallback(({ edge, cursor, style }: { edge: ResizeEdge; cursor: string; style: React.CSSProperties }) => {

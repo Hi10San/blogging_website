@@ -198,7 +198,7 @@ export const ProfilePopup: React.FC<ProfilePopupProps> = ({ open, onClose, onBlo
             initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
             transition={{ duration: 0.25, ease: [0.32, 0, 0.24, 1] }}
             onPointerDown={() => onBringToFront?.()}
-            style={{ position: "fixed", zIndex: zIndex + 2, display: "flex", flexDirection: "column", overflow: "hidden", ...popupStyle, maxWidth: "100vw", maxHeight: "100vh" }}
+            style={{ position: "fixed", zIndex: zIndex + 2, display: "flex", flexDirection: "column", overflow: "hidden", ...popupStyle, maxWidth: "100vw", maxHeight: "100dvh" }}
             className="bg-card/98 backdrop-blur-2xl border border-border shadow-2xl rounded-[20px] overflow-hidden"
           >
             {/* Resize Handles */}

@@ -459,7 +459,7 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
               overflow: "hidden",
               ...popupStyle,
               maxWidth: "100vw",
-              maxHeight: "100vh",
+              maxHeight: "100dvh",
             }}
             className="bg-card/98 backdrop-blur-2xl border border-border shadow-2xl rounded-[20px]"
           >
