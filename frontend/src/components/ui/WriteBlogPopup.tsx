@@ -247,6 +247,14 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
     savedHtmlRef.current = html;
   }, []);
 
+  const timeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
   // ── Geometry & Drag/Resize ─────────────────────────────
   const {
     pos,
@@ -370,6 +378,21 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
     }
   };
 
+  const resetForm = () => {
+    setTitle("");
+    setTags("");
+    setCoverPreview(null);
+    setIsPreview(false);
+    setPreviewContent("");
+    setIsSaved(false);
+    setPublished(false);
+    setSelectedImage(null);
+    savedHtmlRef.current = "";
+    if (editorRef.current) {
+      editorRef.current.innerHTML = "";
+    }
+  };
+
   // ── Save Draft ──────────────────────────────────────────
   const handleSave = () => {
     setIsSaved(true);
@@ -399,6 +422,9 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
       });
 
       setPublished(true);
+      timeoutRef.current = setTimeout(() => {
+        resetForm();
+      }, 2000);
     } catch (err: any) {
       console.error("Failed to publish blog", err);
       alert(`Failed to publish blog: ${err.message}`);
