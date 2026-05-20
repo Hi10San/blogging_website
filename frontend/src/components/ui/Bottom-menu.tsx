@@ -76,6 +76,11 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onExplor
   // Fetch notifications periodically
   useEffect(() => {
     const load = async () => {
+      const { token } = getAuth();
+      if (!token) {
+        setNotifications([]);
+        return;
+      }
       try {
         const { fetchNotifications } = await import("../../lib/api");
         const data = await fetchNotifications();
@@ -97,6 +102,11 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onExplor
   useEffect(() => {
     if (view === "notifications") {
       const load = async () => {
+        const { token } = getAuth();
+        if (!token) {
+          setNotifications([]);
+          return;
+        }
         try {
           const { fetchNotifications } = await import("../../lib/api");
           const data = await fetchNotifications();

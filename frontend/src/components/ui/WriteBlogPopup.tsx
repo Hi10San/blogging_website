@@ -30,6 +30,7 @@ interface WriteBlogPopupProps {
 }
 
 import { useDraggablePopup } from "../../hooks/useDraggablePopup";
+import { compressImage } from "../../lib/utils";
 
 type FormatCmd =
   | "bold"
@@ -311,17 +312,17 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
     editorFileInputRef.current?.click();
   };
 
-  const handleEditorImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditorImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
+    try {
+      const dataUrl = await compressImage(file);
       restoreSelection();
       // Insert image with default 100% width and centered block
       document.execCommand("insertHTML", false, `<img src="${dataUrl}" style="max-width: 100%; width: 100%; border-radius: 8px; margin: 10px auto; display: block;" />`);
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Failed to compress editor image:", err);
+    }
     e.target.value = "";
   };
 
@@ -358,12 +359,15 @@ export const WriteBlogPopup: React.FC<WriteBlogPopupProps> = ({
   };
 
   // ── Cover Image ─────────────────────────────────────────
-  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setCoverPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file);
+      setCoverPreview(compressed);
+    } catch (err) {
+      console.error("Failed to compress cover image:", err);
+    }
   };
 
   // ── Save Draft ──────────────────────────────────────────
