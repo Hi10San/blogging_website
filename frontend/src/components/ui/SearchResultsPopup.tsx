@@ -34,7 +34,10 @@ export const SearchResultsPopup: React.FC<SearchResultsPopupProps> = ({ open, qu
   const [loading, setLoading] = useState(false);
 
   const loadResults = async () => {
-    if (!query) return;
+    if (!query && mode !== "blogs") {
+      setUsers([]);
+      return;
+    }
     setLoading(true);
     try {
       if (mode === "blogs") {
@@ -54,7 +57,7 @@ export const SearchResultsPopup: React.FC<SearchResultsPopupProps> = ({ open, qu
   };
 
   useEffect(() => {
-    if (open && query) {
+    if (open) {
       loadResults();
     }
   }, [open, query, mode]);
@@ -96,7 +99,7 @@ export const SearchResultsPopup: React.FC<SearchResultsPopupProps> = ({ open, qu
             <div className="flex items-center gap-2 px-4 py-3 border-b border-border flex-shrink-0 select-none" style={{ cursor: isMaximized ? "default" : "grab" }} onPointerDown={onDragPointerDown} onPointerMove={onDragPointerMove} onPointerUp={onDragPointerUp}>
               <HugeiconsIcon icon={Move01Icon} size={16} className="text-muted-foreground/40 flex-shrink-0" />
               <span className="text-[13px] font-semibold text-foreground tracking-tight flex-1 text-center truncate">
-                Search Results: "{query}"
+                {query ? `Search Results: "${query}"` : "Explore Blogs"}
               </span>
               <div className="flex items-center gap-1 flex-shrink-0" onPointerDown={(e) => e.stopPropagation()}>
                 <button title={isMaximized ? "Restore" : "Maximize"} onClick={toggleMaximize} className="p-1.5 rounded-lg hover:bg-muted transition-all duration-75 text-muted-foreground hover:text-foreground">
@@ -113,7 +116,9 @@ export const SearchResultsPopup: React.FC<SearchResultsPopupProps> = ({ open, qu
                 <div className="text-center py-10 text-muted-foreground">Searching...</div>
               ) : mode === "blogs" ? (
                 blogs.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground">No blogs found for "{query}".</div>
+                  <div className="text-center py-10 text-muted-foreground">
+                    {query ? `No blogs found for "${query}".` : "No blogs found."}
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {blogs.map((blog) => (
@@ -150,7 +155,9 @@ export const SearchResultsPopup: React.FC<SearchResultsPopupProps> = ({ open, qu
                 )
               ) : (
                 users.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground">No users found for "{query}".</div>
+                  <div className="text-center py-10 text-muted-foreground">
+                    {query ? `No users found for "${query}".` : "No users found."}
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {users.map((user) => (

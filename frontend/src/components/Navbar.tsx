@@ -57,6 +57,13 @@ export default function Navbar() {
         bringToFront("search");
     };
 
+    const handleExplore = () => {
+        setSearchQuery("");
+        setSearchMode("blogs");
+        setSearchOpen(true);
+        bringToFront("search");
+    };
+
     const handleReadBlog = (blog: any) => {
         setSelectedBlog(blog);
         bringToFront("readBlog");
@@ -87,6 +94,7 @@ export default function Navbar() {
                     onMyBlogs={openMyBlogs}
                     onMyProfile={openProfile}
                     onFollowing={openFollowing}
+                    onExplore={handleExplore}
                     onSearch={handleSearch}
                     onReadBlogId={handleReadBlogId}
                 />

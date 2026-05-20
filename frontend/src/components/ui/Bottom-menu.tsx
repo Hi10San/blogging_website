@@ -12,6 +12,7 @@ import {
   PencilEdit02Icon,
   FilterHorizontalIcon,
   AutoConversationsIcon,
+  Compass01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import React, { useMemo, useState, useRef, useEffect } from "react";
@@ -57,11 +58,12 @@ interface BottomMenuProps {
   onMyBlogs?: () => void;
   onMyProfile?: () => void;
   onFollowing?: () => void;
+  onExplore?: () => void;
   onSearch?: (query: string, mode: "users" | "blogs") => void;
   onReadBlogId?: (id: string) => void;
 }
 
-const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch, onReadBlogId }: BottomMenuProps) => {
+const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onExplore, onSearch, onReadBlogId }: BottomMenuProps) => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -202,7 +204,7 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
             </div>
             <div className="flex gap-1.5">
               <button
-                className={`${sharedHover} w-full flex items-center gap-2 bg-muted/50 dark:bg-muted hover:bg-[#ebd5bb] dark:hover:bg-accent`}
+                className={`${sharedHover} flex-1 flex items-center justify-center gap-1.5 bg-muted/50 dark:bg-muted hover:bg-[#ebd5bb] dark:hover:bg-accent`}
                 onClick={() => {
                   setView("default");
                   onFollowing?.();
@@ -210,6 +212,16 @@ const BottomMenu = ({ onWriteBlog, onMyBlogs, onMyProfile, onFollowing, onSearch
               >
                 <HugeiconsIcon icon={UserEdit01Icon} size={16} />
                 <span>Following</span>
+              </button>
+              <button
+                className={`${sharedHover} flex-1 flex items-center justify-center gap-1.5 bg-muted/50 dark:bg-muted hover:bg-[#ebd5bb] dark:hover:bg-accent`}
+                onClick={() => {
+                  setView("default");
+                  onExplore?.();
+                }}
+              >
+                <HugeiconsIcon icon={Compass01Icon} size={16} />
+                <span>Explore</span>
               </button>
               {/* Blog filter toggle */}
               <button

@@ -1,9 +1,13 @@
+// Force DNS resolution using Google DNS to bypass ISP/local DNS blocks on MongoDB SRV lookups
+const dns = require('dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 
 const app = express();
 
@@ -19,14 +23,160 @@ app.use(cors({
 // Handle preflight OPTIONS requests globally
 app.options('*', cors());
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // --- DATABASE CONNECTION ---
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/hi10blog';
 
-mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ Hi10 Database Connected → ' + MONGO_URI))
-    .catch(err => console.error('❌ Database connection error:', err));
+const https = require('https');
+
+function fetchJsonHttps(url) {
+    return new Promise((resolve, reject) => {
+        https.get(url, (res) => {
+            let data = '';
+            res.on('data', (chunk) => { data += chunk; });
+            res.on('end', () => {
+                try {
+                    resolve(JSON.parse(data));
+                } catch (e) {
+                    reject(new Error('Failed to parse DNS response: ' + e.message));
+                }
+            });
+        }).on('error', (err) => {
+            reject(err);
+        });
+    });
+}
+
+async function resolveSrvUri(uri) {
+    if (!uri.startsWith('mongodb+srv://')) {
+        return uri;
+    }
+    const match = uri.match(/^mongodb\+srv:\/\/([^:]+):([^@]+)@([^/]+)(.*)$/);
+    if (!match) return uri;
+
+    const [_, user, password, srvHost, rest] = match;
+    const dbAndOptions = rest || '';
+    const [dbPart, optionsPart] = dbAndOptions.split('?');
+    const dbName = dbPart ? dbPart.replace('/', '') : 'hi10blog';
+
+    try {
+        console.log(`🔍 Resolving MongoDB SRV records for _mongodb._tcp.${srvHost} via local DNS...`);
+        const srvRecords = await dns.promises.resolveSrv(`_mongodb._tcp.${srvHost}`);
+        if (!srvRecords || srvRecords.length === 0) {
+            throw new Error('No SRV records found');
+        }
+        const hosts = srvRecords.map(record => `${record.name}:${record.port}`).join(',');
+        
+        let txtParams = '';
+        try {
+            const txtRecords = await dns.promises.resolveTxt(srvHost);
+            if (txtRecords && txtRecords.length > 0) {
+                txtParams = '&' + txtRecords.map(record => record.join('')).join('&');
+            }
+        } catch (txtErr) {
+            console.warn('⚠️ Warning: Failed to resolve TXT records:', txtErr.message);
+        }
+
+        let finalOptions = 'ssl=true';
+        if (txtParams) {
+            finalOptions += txtParams;
+        } else {
+            finalOptions += '&authSource=admin';
+        }
+        if (optionsPart) {
+            finalOptions += '&' + optionsPart;
+        }
+
+        const resolvedUri = `mongodb://${user}:${password}@${hosts}/${dbName}?${finalOptions}`;
+        console.log(`✅ Resolved SRV URI successfully.`);
+        return resolvedUri;
+    } catch (err) {
+        console.error('❌ Local SRV resolution failed, falling back to original URI:', err.message);
+        return uri;
+    }
+}
+
+async function resolveSrvUriDoH(uri) {
+    if (!uri.startsWith('mongodb+srv://')) {
+        return uri;
+    }
+    const match = uri.match(/^mongodb\+srv:\/\/([^:]+):([^@]+)@([^/]+)(.*)$/);
+    if (!match) return uri;
+
+    const [_, user, password, srvHost, rest] = match;
+    const dbAndOptions = rest || '';
+    const [dbPart, optionsPart] = dbAndOptions.split('?');
+    const dbName = dbPart ? dbPart.replace('/', '') : 'hi10blog';
+
+    try {
+        console.log(`🔍 Resolving MongoDB SRV records for _mongodb._tcp.${srvHost} via DNS over HTTPS...`);
+        const srvUrl = `https://dns.google/resolve?name=_mongodb._tcp.${srvHost}&type=SRV`;
+        const srvRes = await fetchJsonHttps(srvUrl);
+        
+        if (!srvRes.Answer || srvRes.Answer.length === 0) {
+            throw new Error('No SRV records returned from DNS over HTTPS');
+        }
+        
+        const hosts = srvRes.Answer.map(ans => {
+            const parts = ans.data.trim().split(/\s+/);
+            const port = parts[2];
+            const target = parts[3].endsWith('.') ? parts[3].slice(0, -1) : parts[3];
+            return `${target}:${port}`;
+        }).join(',');
+
+        let txtParams = '';
+        try {
+            const txtUrl = `https://dns.google/resolve?name=${srvHost}&type=TXT`;
+            const txtRes = await fetchJsonHttps(txtUrl);
+            if (txtRes.Answer && txtRes.Answer.length > 0) {
+                const params = txtRes.Answer.map(ans => {
+                    let val = ans.data;
+                    if (val.startsWith('"') && val.endsWith('"')) {
+                        val = val.slice(1, -1);
+                    }
+                    return val;
+                }).join('&');
+                if (params) {
+                    txtParams = '&' + params;
+                }
+            }
+        } catch (txtErr) {
+            console.warn('⚠️ Warning: DNS over HTTPS failed to resolve TXT records:', txtErr.message);
+        }
+
+        let finalOptions = 'ssl=true';
+        if (txtParams) {
+            finalOptions += txtParams;
+        } else {
+            finalOptions += '&authSource=admin';
+        }
+        if (optionsPart) {
+            finalOptions += '&' + optionsPart;
+        }
+
+        const resolvedUri = `mongodb://${user}:${password}@${hosts}/${dbName}?${finalOptions}`;
+        console.log(`✅ Resolved SRV URI successfully via DNS over HTTPS.`);
+        return resolvedUri;
+    } catch (err) {
+        console.error('❌ DNS over HTTPS SRV resolution failed, falling back to local resolver:', err.message);
+        return resolveSrvUri(uri);
+    }
+}
+
+async function connectDB() {
+    console.log('🔌 Connecting to database...');
+    const resolvedUri = await resolveSrvUriDoH(MONGO_URI);
+    try {
+        await mongoose.connect(resolvedUri);
+        console.log('✅ Hi10 Database Connected successfully!');
+    } catch (err) {
+        console.error('❌ Database connection error:', err);
+    }
+}
+
+connectDB();
 
 // --- DATA MODELS ---
 
